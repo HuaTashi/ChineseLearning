@@ -293,9 +293,7 @@
             { ru: "Где библиотека?", target: "图书馆在哪儿" }
         ];
     </script>
-
         <script>
-        // --- ЛОГИКА ---
         let allWords = JSON.parse(localStorage.getItem('allWords')) || Object.values(initialLessons).flatMap(l => l.words);
         let decks = JSON.parse(localStorage.getItem('decks')) || { "default": { name: "Общая", words: allWords } };
         let grammar = JSON.parse(localStorage.getItem('grammar')) || initialGrammar;
