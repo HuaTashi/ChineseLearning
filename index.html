@@ -58,25 +58,29 @@
         /* Settings Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
         .modal.active { display: flex; }
-        .book { background: #fdfbf7; width: 90%; max-width: 500px; height: 70%; border-radius: 10px; display: flex; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; overflow: hidden; border: 2px solid #e0d8c8; }
-        .page { flex: 1; padding: 20px; overflow-y: auto; }
+        .book { background: #fdfbf7; width: 90%; max-width: 500px; height: 80%; border-radius: 10px; display: flex; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; overflow: hidden; border: 2px solid #e0d8c8; flex-direction: column; }
+        .book-header { background: #e8e2d5; padding: 10px; text-align: center; font-weight: bold; border-bottom: 1px solid #d0c8b8; display: flex; justify-content: space-between; align-items: center; }
+        .book-content { display: flex; flex: 1; overflow: hidden; }
+        .page { flex: 1; padding: 15px; overflow-y: auto; }
         .page-left { border-right: 1px dashed #ccc; }
-        .page h3 { margin-bottom: 15px; font-size: 18px; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .page h3 { margin-bottom: 15px; font-size: 16px; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
         .setting-item { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
         .setting-item label { font-size: 14px; font-weight: bold; }
-        .setting-item select, .setting-item button { padding: 8px; border-radius: 5px; border: 1px solid #ccc; background: white; font-size: 14px; }
+        .setting-item select, .setting-item button, .setting-item input { padding: 8px; border-radius: 5px; border: 1px solid #ccc; background: white; font-size: 14px; width: 100%; }
         .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 10px; }
         .toggle-btn { background: #ccc; border: none; width: 40px; height: 20px; border-radius: 10px; position: relative; cursor: pointer; transition: background 0.2s; }
         .toggle-btn::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: left 0.2s; }
         .toggle-btn.on { background: var(--sage); }
         .toggle-btn.on::after { left: 22px; }
+        .close-book { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
 
         /* Garden / Map */
-        .garden-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
+        .garden-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; margin-bottom: 20px; }
         .garden-cell { aspect-ratio: 1; background: #e0e0e0; border-radius: 2px; }
         .garden-cell.level-1 { background: #c8e6c9; }
         .garden-cell.level-2 { background: #81c784; }
         .garden-cell.level-3 { background: #4caf50; }
+        .month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; }
         
         /* Write Tab */
         .input-area { width: 100%; padding: 15px; font-size: 20px; border: 2px solid #ccc; border-radius: 10px; margin-bottom: 10px; text-align: center; }
@@ -98,6 +102,12 @@
         .flower-icon { position: fixed; bottom: 80px; right: 20px; font-size: 30px; cursor: pointer; z-index: 50; transition: transform 0.3s; }
         .flower-icon:active { transform: scale(1.2); }
         .flower-icon.bud { opacity: 0.6; filter: grayscale(1); }
+
+        /* Forms for adding words */
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 2px; }
+        .deck-list { margin-top: 10px; }
+        .deck-item { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -148,6 +158,7 @@
             <div class="word-bank" id="make-bank"></div>
             <button class="btn" onclick="checkMake()">Проверить</button>
             <div id="make-result" style="text-align: center; margin-top: 10px; font-size: 20px;"></div>
+            <button class="btn" style="background: #ccc; margin-top: 10px;" onclick="nextMakeTask()">Следующее задание</button>
         </div>
 
         <!-- Write Tab -->
@@ -158,6 +169,7 @@
             <button class="btn" onclick="checkWrite()">Проверить</button>
             <div id="write-chickens" style="text-align: center; font-size: 24px; margin-top: 10px;"></div>
             <div class="result-area" id="write-result"></div>
+            <button class="btn" style="background: #ccc; margin-top: 10px;" onclick="nextWriteTask()">Следующее задание</button>
         </div>
 
         <!-- Memo Tab -->
@@ -182,57 +194,88 @@
     <!-- Settings Modal -->
     <div class="modal" id="settings-modal">
         <div class="book">
-            <div class="page page-left">
-                <h3>Импорт / Экспорт</h3>
-                <div class="setting-item">
-                    <button class="btn" onclick="exportData()">Экспорт</button>
-                    <small style="color: #888;">Сохранить всё в файл</small>
-                </div>
-                <div class="setting-item">
-                    <label for="import-file" class="btn" style="text-align: center; background: #666;">Импорт</label>
-                    <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importData(event)">
-                    <small style="color: #888;">Загрузить из файла (заменит данные)</small>
-                </div>
-                <button class="btn" style="background: #ccc; margin-top: 20px;" onclick="closeSettings()">Закрыть</button>
+            <div class="book-header">
+                <span>Настройки</span>
+                <button class="close-book" onclick="closeSettings()">✕</button>
             </div>
-            <div class="page page-right">
-                <h3>Настройки</h3>
-                <div class="setting-item">
-                    <label>Пиньинь</label>
-                    <select id="setting-pinyin" onchange="saveSettings()">
-                        <option value="always">Сразу</option>
-                        <option value="tap" selected>По нажатию</option>
-                        <option value="off">Выключен</option>
-                    </select>
+            <div class="book-content">
+                <div class="page page-left">
+                    <h3>Импорт / Экспорт</h3>
+                    <div class="setting-item">
+                        <button class="btn" onclick="exportData()">Экспорт</button>
+                        <small style="color: #888;">Сохранить всё в файл</small>
+                    </div>
+                    <div class="setting-item">
+                        <label for="import-file" class="btn" style="text-align: center; background: #666;">Импорт</label>
+                        <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importData(event)">
+                        <small style="color: #888;">Загрузить из файла (заменит данные)</small>
+                    </div>
+                    
+                    <h3 style="margin-top: 20px;">Колоды</h3>
+                    <div class="deck-list" id="deck-list"></div>
+                    <button class="btn" style="background: var(--sage); margin-top: 10px;" onclick="openCreateDeck()">+ Создать колоду</button>
+                    <button class="btn" style="background: #ccc; margin-top: 10px;" onclick="openAddWord()">+ Добавить слово</button>
                 </div>
-                <div class="setting-item">
-                    <label>Перевод</label>
-                    <select id="setting-trans" onchange="saveSettings()">
-                        <option value="always">Сразу</option>
-                        <option value="tap" selected>По нажатию</option>
-                        <option value="off">Выключен</option>
-                    </select>
+                <div class="page page-right">
+                    <h3>Отображение</h3>
+                    <div class="setting-item">
+                        <label>Пиньинь</label>
+                        <select id="setting-pinyin" onchange="saveSettings()">
+                            <option value="always">Сразу</option>
+                            <option value="tap" selected>По нажатию</option>
+                            <option value="off">Выключен</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Перевод</label>
+                        <select id="setting-trans" onchange="saveSettings()">
+                            <option value="always">Сразу</option>
+                            <option value="tap" selected>По нажатию</option>
+                            <option value="off">Выключен</option>
+                        </select>
+                    </div>
+                    <div class="toggle-row">
+                        <span>Цветы</span>
+                        <button id="toggle-flowers" class="toggle-btn on" onclick="toggleSetting('flowers')"></button>
+                    </div>
+                    <div class="toggle-row">
+                        <span>Карта</span>
+                        <button id="toggle-map" class="toggle-btn on" onclick="toggleSetting('map')"></button>
+                    </div>
+                    <div class="toggle-row">
+                        <span>Подсказки</span>
+                        <button id="toggle-hints" class="toggle-btn on" onclick="toggleSetting('hints')"></button>
+                    </div>
                 </div>
-                <div class="toggle-row">
-                    <span>Цветы</span>
-                    <button id="toggle-flowers" class="toggle-btn on" onclick="toggleSetting('flowers')"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Garden Modal -->
+    <div class="modal" id="garden-modal">
+        <div class="book">
+            <div class="book-header">
+                <span>Твой сад</span>
+                <button class="close-book" onclick="closeGarden()">✕</button>
+            </div>
+            <div class="book-content" style="display: flex; flex-direction: column; padding: 15px;">
+                <div class="month-nav">
+                    <button class="btn" style="width: auto; padding: 5px 15px;" onclick="changeMonth(-1)">←</button>
+                    <span id="garden-month-label">Ноябрь 2026</span>
+                    <button class="btn" style="width: auto; padding: 5px 15px;" onclick="changeMonth(1)">→</button>
                 </div>
-                <div class="toggle-row">
-                    <span>Карта</span>
-                    <button id="toggle-map" class="toggle-btn on" onclick="toggleSetting('map')"></button>
+                <div id="garden-flowers" style="text-align: center; font-size: 20px; margin-bottom: 15px;">
+                    🌸 0
                 </div>
-                <div class="toggle-row">
-                    <span>Подсказки</span>
-                    <button id="toggle-hints" class="toggle-btn on" onclick="toggleSetting('hints')"></button>
-                </div>
-                <button class="btn" style="background: var(--sage); margin-top: 20px;" onclick="closeSettings()">Сохранить</button>
+                <div style="font-size: 14px; color: #888; margin-bottom: 5px;">Карта занятий (последние 4 недели):</div>
+                <div class="garden-grid" id="garden-grid"></div>
             </div>
         </div>
     </div>
 
     <script>
         // --- ДАННЫЕ (Уроки 1, 2, 3, 4, 5, 6) ---
-        const lessons = {
+        const initialLessons = {
             "1": {
                 title: "Урок 1: 你好",
                 words: [
@@ -255,12 +298,12 @@
                     { hanzi: "名字", pinyin: "míngzi", trans: "имя", ex: null }
                 ],
                 dialogues: [
-                    { speaker: "萨沙", text: "你好！", pinyin: "Nǐ hǎo!", trans: "Привет!" },
-                    { speaker: "李军", text: "你好！", pinyin: "Nǐ hǎo!", trans: "Привет!" },
-                    { speaker: "萨沙", text: "你是老师吗？", pinyin: "Nǐ shì lǎoshī ma?", trans: "Ты учитель?" },
-                    { speaker: "李军", text: "不是，我不是老师，我是学生。她是老师。", pinyin: "Bú shì, wǒ bú shì lǎoshī, wǒ shì xuésheng. Tā shì lǎoshī.", trans: "Нет, я не учитель, я студент. Она учитель." },
-                    { speaker: "萨沙", text: "谢谢。", pinyin: "Xièxie.", trans: "Спасибо." },
-                    { speaker: "李军", text: "不客气。", pinyin: "Bú kèqi.", trans: "Не за что." }
+                    { speaker: "萨沙", speakerTrans: "Саша", text: "你好！", pinyin: "Nǐ hǎo!", trans: "Привет!" },
+                    { speaker: "李军", speakerTrans: "Ли Цзюнь", text: "你好！", pinyin: "Nǐ hǎo!", trans: "Привет!" },
+                    { speaker: "萨沙", speakerTrans: "Саша", text: "你是老师吗？", pinyin: "Nǐ shì lǎoshī ma?", trans: "Ты учитель?" },
+                    { speaker: "李军", speakerTrans: "Ли Цзюнь", text: "不是，我不是老师，我是学生。她是老师。", pinyin: "Bú shì, wǒ bú shì lǎoshī, wǒ shì xuésheng. Tā shì lǎoshī.", trans: "Нет, я не учитель, я студент. Она учитель." },
+                    { speaker: "萨沙", speakerTrans: "Саша", text: "谢谢。", pinyin: "Xièxie.", trans: "Спасибо." },
+                    { speaker: "李军", speakerTrans: "Ли Цзюнь", text: "不客气。", pinyin: "Bú kèqi.", trans: "Не за что." }
                 ]
             },
             "2": {
@@ -284,12 +327,12 @@
                     { hanzi: "呢", pinyin: "ne", trans: "фразовая частица", ex: { hanzi: "我是俄罗斯人，你呢？", pinyin: "Wǒ shì Éluósī rén, nǐ ne?", trans: "Я русский, а ты?" } }
                 ],
                 dialogues: [
-                    { speaker: "刘老师", text: "同学们好！", pinyin: "Tóngxuémen hǎo!", trans: "Здравствуйте, студенты!" },
-                    { speaker: "学生", text: "老师好！", pinyin: "Lǎoshī hǎo!", trans: "Здравствуйте, учитель!" },
-                    { speaker: "刘老师", text: "我来介绍一下儿。我姓刘，叫刘明，是你们的老师。你叫什么名字？", pinyin: "Wǒ lái jièshào yíxiàr. Wǒ xìng Liú, jiào Liú Míng, shì nǐmen de lǎoshī. Nǐ jiào shénme míngzi?", trans: "Позвольте представиться. Моя фамилия Лю, зовут Лю Мин, я ваш учитель. Как тебя зовут?" },
-                    { speaker: "萨沙", text: "我叫萨沙。", pinyin: "Wǒ jiào Sàshā.", trans: "Меня зовут Саша." },
-                    { speaker: "刘老师", text: "你是哪国人？", pinyin: "Nǐ shì nǎ guó rén?", trans: "Из какой ты страны?" },
-                    { speaker: "萨沙", text: "我是俄罗斯人。", pinyin: "Wǒ shì Éluósī rén.", trans: "Я русский." }
+                    { speaker: "刘老师", speakerTrans: "Учитель Лю", text: "同学们好！", pinyin: "Tóngxuémen hǎo!", trans: "Здравствуйте, студенты!" },
+                    { speaker: "学生", speakerTrans: "Студент", text: "老师好！", pinyin: "Lǎoshī hǎo!", trans: "Здравствуйте, учитель!" },
+                    { speaker: "刘老师", speakerTrans: "Учитель Лю", text: "我来介绍一下儿。我姓刘，叫刘明，是你们的老师。你叫什么名字？", pinyin: "Wǒ lái jièshào yíxiàr. Wǒ xìng Liú, jiào Liú Míng, shì nǐmen de lǎoshī. Nǐ jiào shénme míngzi?", trans: "Позвольте представиться. Моя фамилия Лю, зовут Лю Мин, я ваш учитель. Как тебя зовут?" },
+                    { speaker: "萨沙", speakerTrans: "Саша", text: "我叫萨沙。", pinyin: "Wǒ jiào Sàshā.", trans: "Меня зовут Саша." },
+                    { speaker: "刘老师", speakerTrans: "Учитель Лю", text: "你是哪国人？", pinyin: "Nǐ shì nǎ guó rén?", trans: "Из какой ты страны?" },
+                    { speaker: "萨沙", speakerTrans: "Саша", text: "我是俄罗斯人。", pinyin: "Wǒ shì Éluósī rén.", trans: "Я русский." }
                 ]
             },
             "3": {
@@ -312,12 +355,12 @@
                     { hanzi: "谁", pinyin: "shéi", trans: "кто", ex: null }
                 ],
                 dialogues: [
-                    { speaker: "玛莎", text: "同学，这是你的书吗？", pinyin: "Tóngxué, zhè shì nǐ de shū ma?", trans: "Студент, это твоя книга?" },
-                    { speaker: "学生B", text: "不是，这不是我的书。", pinyin: "Bú shì, zhè bú shì wǒ de shū.", trans: "Нет, это не моя книга." },
-                    { speaker: "玛莎", text: "那是谁的书？", pinyin: "Nà shì shéi de shū?", trans: "Тогда чья это книга?" },
-                    { speaker: "学生B", text: "那是我朋友的书。", pinyin: "Nà shì wǒ péngyou de shū.", trans: "Это книга моего друга." },
-                    { speaker: "玛莎", text: "这是什么杂志？", pinyin: "Zhè shì shénme zázhì?", trans: "Это какой журнал?" },
-                    { speaker: "学生B", text: "这是汉语杂志。", pinyin: "Zhè shì Hànyǔ zázhì.", trans: "Это журнал на китайском." }
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "同学，这是你的书吗？", pinyin: "Tóngxué, zhè shì nǐ de shū ma?", trans: "Студент, это твоя книга?" },
+                    { speaker: "学生B", speakerTrans: "Студент Б", text: "不是，这不是我的书。", pinyin: "Bú shì, zhè bú shì wǒ de shū.", trans: "Нет, это не моя книга." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "那是谁的书？", pinyin: "Nà shì shéi de shū?", trans: "Тогда чья это книга?" },
+                    { speaker: "学生B", speakerTrans: "Студент Б", text: "那是我朋友的书。", pinyin: "Nà shì wǒ péngyou de shū.", trans: "Это книга моего друга." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "这是什么杂志？", pinyin: "Zhè shì shénme zázhì?", trans: "Это какой журнал?" },
+                    { speaker: "学生B", speakerTrans: "Студент Б", text: "这是汉语杂志。", pinyin: "Zhè shì Hànyǔ zázhì.", trans: "Это журнал на китайском." }
                 ]
             },
             "4": {
@@ -343,12 +386,12 @@
                     { hanzi: "不用谢", pinyin: "búyòng xiè", trans: "не за что", ex: null }
                 ],
                 dialogues: [
-                    { speaker: "玛莎", text: "同学，这儿是图书馆吗？", pinyin: "Tóngxué, zhèr shì túshūguǎn ma?", trans: "Студент, здесь библиотека?" },
-                    { speaker: "学生B", text: "不是，这儿是教学楼，图书馆在那儿，宿舍楼的北边。", pinyin: "Bú shì, zhèr shì jiàoxuélóu, túshūguǎn zài nàr, sùshèlóu de běibian.", trans: "Нет, здесь учебный корпус, библиотека там, к северу от общежития." },
-                    { speaker: "玛莎", text: "是左边的楼吗？", pinyin: "Shì zuǒbian de lóu ma?", trans: "Это здание слева?" },
-                    { speaker: "学生B", text: "不，是右边的楼。", pinyin: "Bù, shì yòubian de lóu.", trans: "Нет, здание справа." },
-                    { speaker: "玛莎", text: "谢谢。", pinyin: "Xièxie.", trans: "Спасибо." },
-                    { speaker: "学生B", text: "不用谢。", pinyin: "Búyòng xiè.", trans: "Не за что." }
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "同学，这儿是图书馆吗？", pinyin: "Tóngxué, zhèr shì túshūguǎn ma?", trans: "Студент, здесь библиотека?" },
+                    { speaker: "学生B", speakerTrans: "Студент Б", text: "不是，这儿是教学楼，图书馆在那儿，宿舍楼的北边。", pinyin: "Bú shì, zhèr shì jiàoxuélóu, túshūguǎn zài nàr, sùshèlóu de běibian.", trans: "Нет, здесь учебный корпус, библиотека там, к северу от общежития." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "是左边的楼吗？", pinyin: "Shì zuǒbian de lóu ma?", trans: "Это здание слева?" },
+                    { speaker: "学生B", speakerTrans: "Студент Б", text: "不，是右边的楼。", pinyin: "Bù, shì yòubian de lóu.", trans: "Нет, здание справа." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "谢谢。", pinyin: "Xièxie.", trans: "Спасибо." },
+                    { speaker: "学生B", speakerTrans: "Студент Б", text: "不用谢。", pinyin: "Búyòng xiè.", trans: "Не за что." }
                 ]
             },
             "5": {
@@ -376,12 +419,12 @@
                     { hanzi: "对", pinyin: "duì", trans: "правильный", ex: null }
                 ],
                 dialogues: [
-                    { speaker: "玛莎", text: "你好！你叫什么名字？", pinyin: "Nǐ hǎo! Nǐ jiào shénme míngzi?", trans: "Привет! Как тебя зовут?" },
-                    { speaker: "张红", text: "我叫张红。你呢？", pinyin: "Wǒ jiào Zhāng Hóng. Nǐ ne?", trans: "Меня зовут Чжан Хун. А тебя?" },
-                    { speaker: "玛莎", text: "我叫玛莎。我是北京大学的留学生。我的专业是国际关系。你呢？", pinyin: "Wǒ jiào Mǎshā. Wǒ shì Běijīng Dàxué de liúxuéshēng. Wǒ de zhuānyè shì guójì guānxi. Nǐ ne?", trans: "Меня зовут Маша. Я студентка Пекинского университета. Моя специальность — международные отношения. А ты?" },
-                    { speaker: "张红", text: "我是清华大学中文系的研究生。我的专业是现代文学。", pinyin: "Wǒ shì Qīnghuá Dàxué Zhōngwén xì de yánjiūshēng. Wǒ de zhuānyè shì xiàndài wénxué.", trans: "Я аспирантка факультета китайского языка Университета Цинхуа. Моя специальность — современная литература." },
-                    { speaker: "玛莎", text: "清华大学在哪儿？", pinyin: "Qīnghuá Dàxué zài nǎr?", trans: "Где находится Университет Цинхуа?" },
-                    { speaker: "张红", text: "在北京大学的东边。有空儿的时候，欢迎你去玩儿。", pinyin: "Zài Běijīng Dàxué de dōngbian. Yǒu kòngr de shíhou, huānyíng nǐ qù wánr.", trans: "К востоку от Пекинского университета. Когда будет свободное время, приезжай в гости." }
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "你好！你叫什么名字？", pinyin: "Nǐ hǎo! Nǐ jiào shénme míngzi?", trans: "Привет! Как тебя зовут?" },
+                    { speaker: "张红", speakerTrans: "Чжан Хун", text: "我叫张红。你呢？", pinyin: "Wǒ jiào Zhāng Hóng. Nǐ ne?", trans: "Меня зовут Чжан Хун. А тебя?" },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "我叫玛莎。我是北京大学的留学生。我的专业是国际关系。你呢？", pinyin: "Wǒ jiào Mǎshā. Wǒ shì Běijīng Dàxué de liúxuéshēng. Wǒ de zhuānyè shì guójì guānxi. Nǐ ne?", trans: "Меня зовут Маша. Я студентка Пекинского университета. Моя специальность — международные отношения. А ты?" },
+                    { speaker: "张红", speakerTrans: "Чжан Хун", text: "我是清华大学中文系的研究生。我的专业是现代文学。", pinyin: "Wǒ shì Qīnghuá Dàxué Zhōngwén xì de yánjiūshēng. Wǒ de zhuānyè shì xiàndài wénxué.", trans: "Я аспирантка факультета китайского языка Университета Цинхуа. Моя специальность — современная литература." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "清华大学在哪儿？", pinyin: "Qīnghuá Dàxué zài nǎr?", trans: "Где находится Университет Цинхуа?" },
+                    { speaker: "张红", speakerTrans: "Чжан Хун", text: "在北京大学的东边。有空儿的时候，欢迎你去玩儿。", pinyin: "Zài Běijīng Dàxué de dōngbian. Yǒu kòngr de shíhou, huānyíng nǐ qù wánr.", trans: "К востоку от Пекинского университета. Когда будет свободное время, приезжай в гости." }
                 ]
             },
             "6": {
@@ -415,16 +458,16 @@
                     { hanzi: "见", pinyin: "jiàn", trans: "видеть", ex: null }
                 ],
                 dialogues: [
-                    { speaker: "玛莎", text: "中村，日本的大学早上几点上课？", pinyin: "Zhōngcūn, Rìběn de dàxué zǎoshang jǐ diǎn shàngkè?", trans: "Накамура, во сколько утра начинаются занятия в японских университетах?" },
-                    { speaker: "中村", text: "大部分是九点，我们学校是八点五十分。", pinyin: "Dàbùfen shì jiǔ diǎn, wǒmen xuéxiào shì bā diǎn wǔshí fēn.", trans: "В большинстве в девять, в нашей школе — в восемь пятьдесят." },
-                    { speaker: "玛莎", text: "几点下课？", pinyin: "Jǐ diǎn xiàkè?", trans: "Во сколько заканчиваются?" },
-                    { speaker: "中村", text: "十点半。", pinyin: "Shí diǎn bàn.", trans: "В десять тридцать." },
-                    { speaker: "玛莎", text: "北京大学早上八点上课，太早了。", pinyin: "Běijīng Dàxué zǎoshang bā diǎn shàngkè, tài zǎo le.", trans: "В Пекинском университете занятия начинаются в восемь, слишком рано." }
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "中村，日本的大学早上几点上课？", pinyin: "Zhōngcūn, Rìběn de dàxué zǎoshang jǐ diǎn shàngkè?", trans: "Накамура, во сколько утра начинаются занятия в японских университетах?" },
+                    { speaker: "中村", speakerTrans: "Накамура", text: "大部分是九点，我们学校是八点五十分。", pinyin: "Dàbùfen shì jiǔ diǎn, wǒmen xuéxiào shì bā diǎn wǔshí fēn.", trans: "В большинстве в девять, в нашей школе — в восемь пятьдесят." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "几点下课？", pinyin: "Jǐ diǎn xiàkè?", trans: "Во сколько заканчиваются?" },
+                    { speaker: "中村", speakerTrans: "Накамура", text: "十点半。", pinyin: "Shí diǎn bàn.", trans: "В десять тридцать." },
+                    { speaker: "玛莎", speakerTrans: "Маша", text: "北京大学早上八点上课，太早了。", pinyin: "Běijīng Dàxué zǎoshang bā diǎn shàngkè, tài zǎo le.", trans: "В Пекинском университете занятия начинаются в восемь, слишком рано." }
                 ]
             }
         };
 
-        const grammar = [
+        const initialGrammar = [
             { title: "Предложение с 是", rule: "S + 是 + сущ. (Утверждение), S + 不 + 是 + сущ. (Отрицание)", examples: [ { hanzi: "我是老师。", pinyin: "Wǒ shì lǎoshī.", trans: "Я учитель." }, { hanzi: "我不是留学生。", pinyin: "Wǒ bú shì liúxuéshēng.", trans: "Я не иностранный студент." } ] },
             { title: "Общий вопрос с 吗", rule: "Добавь 吗 в конец утвердительного предложения.", examples: [ { hanzi: "你是老师吗？", pinyin: "Nǐ shì lǎoshī ma?", trans: "Ты учитель?" }, { hanzi: "萨沙是留学生吗？", pinyin: "Sàshā shì liúxuéshēng ma?", trans: "Саша — иностранный студент?" } ] },
             { title: "Суффикс 们", rule: "Обозначает множественное число (только с личными местоимениями и существительными).", examples: [ { hanzi: "同学们好！", pinyin: "Tóngxuémen hǎo!", trans: "Здравствуйте, студенты!" } ] },
@@ -434,34 +477,55 @@
             { title: "Счётное слово 个", rule: "Универсальное счётное слово. Используется с числительными.", examples: [ { hanzi: "一个人", pinyin: "yí gè rén", trans: "один человек" } ] }
         ];
 
-        const settings = {
-            pinyin: 'tap', // 'always', 'tap', 'off'
-            trans: 'tap',
-            flowers: true,
-            map: true,
-            hints: true
+        // Practice Tasks
+        const makeTasks = [
+            { ru: "Я студент", target: "我是学生", bank: ["我", "是", "学生", "老师", "他"] },
+            { ru: "Ты учитель?", target: "你是老师吗", bank: ["你", "是", "老师", "吗", "不"] },
+            { ru: "Она не учитель", target: "她不是老师", bank: ["她", "不", "是", "老师", "我"] },
+            { ru: "Я тоже рад", target: "我也很高兴", bank: ["我", "也", "很", "高兴", "不"] },
+            { ru: "Где библиотека?", target: "图书馆在哪儿", bank: ["图书馆", "在", "哪儿", "是", "这儿"] }
+        ];
+
+        const writeTasks = [
+            { ru: "Я студент", target: "我是学生" },
+            { ru: "Ты учитель?", target: "你是老师吗" },
+            { ru: "Она не учитель", target: "她不是老师" },
+            { ru: "Я тоже рад", target: "我也很高兴" },
+            { ru: "Где библиотека?", target: "图书馆在哪儿" }
+        ];
+
+        // Load Data from LocalStorage or Initial
+        let allWords = JSON.parse(localStorage.getItem('allWords')) || Object.values(initialLessons).flatMap(l => l.words);
+        let decks = JSON.parse(localStorage.getItem('decks')) || { "default": { name: "Общая", words: allWords } };
+        let grammar = JSON.parse(localStorage.getItem('grammar')) || initialGrammar;
+        let readData = JSON.parse(localStorage.getItem('readData')) || initialLessons;
+
+        const settings = JSON.parse(localStorage.getItem('settings')) || {
+            pinyin: 'tap', trans: 'tap', flowers: true, map: true, hints: true
         };
 
         let currentState = {
             tab: 'hanzi',
             cardIndex: 0,
             currentCard: null,
-            deck: 'all', // 'all', 'study'
+            activeDeck: 'default',
             chickens: 0,
             writeAttempts: 0,
             flowersCount: parseInt(localStorage.getItem('flowersCount') || '0'),
-            hasActivity30Days: true, // Mock
-            hasActivityToday: false,
+            hasActivityToday: localStorage.getItem('hasActivityToday') === 'true',
             mapData: JSON.parse(localStorage.getItem('mapData') || '{}'),
-            studyDeck: JSON.parse(localStorage.getItem('studyDeck') || '[]')
+            makeTaskIndex: 0,
+            writeTaskIndex: 0,
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear()
         };
 
-        const allWords = Object.values(lessons).flatMap(l => l.words);
-        let currentDeck = [...allWords];
+        let currentDeckWords = decks[currentState.activeDeck]?.words || allWords;
 
         // --- ИНИЦИАЛИЗАЦИЯ ---
         function init() {
             loadSettings();
+            renderDecks();
             initHanzi();
             initRead();
             initMake();
@@ -472,15 +536,20 @@
 
         // --- ВКЛАДКА ХАНЬЦЗЫ ---
         function initHanzi() {
-            if (currentDeck.length === 0) return;
-            if (currentState.cardIndex >= currentDeck.length) currentState.cardIndex = 0;
-            const word = currentDeck[currentState.cardIndex];
+            currentDeckWords = decks[currentState.activeDeck]?.words || [];
+            if (currentDeckWords.length === 0) {
+                document.getElementById('fc-hanzi').innerText = "Нет слов";
+                return;
+            }
+            if (currentState.cardIndex >= currentDeckWords.length) currentState.cardIndex = 0;
+            const word = currentDeckWords[currentState.cardIndex];
             currentState.currentCard = word;
             currentState.chickens = 0;
 
             document.getElementById('fc-hanzi').innerText = word.hanzi;
             document.getElementById('fc-pinyin').innerText = word.pinyin;
             document.getElementById('fc-trans').innerText = word.trans;
+            document.getElementById('deck-info').innerText = `Колода: ${decks[currentState.activeDeck].name}`;
             
             if (word.ex) {
                 document.getElementById('fc-example').style.display = 'block';
@@ -491,10 +560,9 @@
                 document.getElementById('fc-example').style.display = 'none';
             }
 
-            // Apply settings
             applyCardSettings();
             document.getElementById('fc-chickens').innerHTML = '';
-            document.getElementById('fc-hidden').style.display = 'none'; // Hide by default
+            document.getElementById('fc-hidden').style.display = 'none'; 
         }
 
         function flipCard() {
@@ -516,7 +584,6 @@
             const pinyinEl = document.getElementById('fc-pinyin');
             const transEl = document.getElementById('fc-trans');
 
-            // Reset display
             pinyinEl.style.display = 'block';
             transEl.style.display = 'block';
             hidden.style.display = 'none';
@@ -524,7 +591,6 @@
             if (settings.pinyin === 'off') pinyinEl.style.display = 'none';
             if (settings.trans === 'off') transEl.style.display = 'none';
             
-            // If both are 'always', show hidden container
             if (settings.pinyin === 'always' || settings.trans === 'always') {
                 hidden.style.display = 'block';
             }
@@ -534,14 +600,11 @@
             currentState.chickens = 0;
             document.getElementById('fc-chickens').innerHTML = '';
             
-            // Simple spaced repetition mock
             if (knows) {
-                // Move to end
-                const word = currentDeck.shift();
-                currentDeck.push(word);
+                const word = currentDeckWords.shift();
+                currentDeckWords.push(word);
             } else {
-                // Shuffle slightly
-                currentDeck.sort(() => Math.random() - 0.5);
+                currentDeckWords.sort(() => Math.random() - 0.5);
             }
             
             currentState.cardIndex = 0;
@@ -553,29 +616,32 @@
         function initRead() {
             const container = document.getElementById('read-content');
             container.innerHTML = '';
-            // Show lesson 1 dialogues as default
-            const lesson = lessons['1'];
             
-            lesson.dialogues.forEach(d => {
-                const div = document.createElement('div');
-                div.style.marginBottom = '15px';
-                div.innerHTML = `
-                    <div style="font-size: 14px; color: #888;">${d.speaker}</div>
-                    <div class="read-hanzi">${d.text}</div>
-                    <div class="read-pinyin" style="display: none; color: #666; font-size: 14px;">${d.pinyin}</div>
-                    <div class="read-trans" style="display: none; color: #444; font-size: 14px;">${d.trans}</div>
-                `;
-                div.onclick = () => {
-                    const p = div.querySelector('.read-pinyin');
-                    const t = div.querySelector('.read-trans');
-                    if (settings.pinyin === 'always' || settings.pinyin === 'tap') {
-                        p.style.display = p.style.display === 'none' ? 'block' : 'none';
-                    }
-                    if (settings.trans === 'always' || settings.trans === 'tap') {
-                        t.style.display = t.style.display === 'none' ? 'block' : 'none';
-                    }
-                };
-                container.appendChild(div);
+            // Combine all dialogues from all lessons
+            Object.values(readData).forEach(lesson => {
+                lesson.dialogues.forEach(d => {
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '15px';
+                    div.style.borderBottom = '1px solid #eee';
+                    div.style.paddingBottom = '10px';
+                    div.innerHTML = `
+                        <div style="font-size: 14px; color: #888;">${d.speaker} (${d.speakerTrans})</div>
+                        <div class="read-hanzi" style="font-size: 20px; margin: 5px 0;">${d.text}</div>
+                        <div class="read-pinyin" style="display: none; color: #666; font-size: 14px;">${d.pinyin}</div>
+                        <div class="read-trans" style="display: none; color: #444; font-size: 14px;">${d.trans}</div>
+                    `;
+                    div.onclick = () => {
+                        const p = div.querySelector('.read-pinyin');
+                        const t = div.querySelector('.read-trans');
+                        if (settings.pinyin === 'always' || settings.pinyin === 'tap') {
+                            p.style.display = p.style.display === 'none' ? 'block' : 'none';
+                        }
+                        if (settings.trans === 'always' || settings.trans === 'tap') {
+                            t.style.display = t.style.display === 'none' ? 'block' : 'none';
+                        }
+                    };
+                    container.appendChild(div);
+                });
             });
         }
 
@@ -585,18 +651,19 @@
         let makeCurrent = [];
 
         function initMake() {
-            // Simple mock sentence: "我是学生"
-            makeTarget = "我是学生";
-            makeWords = ["我", "是", "学生", "老师", "他"]; // Extra words as distractors
+            if (currentState.makeTaskIndex >= makeTasks.length) currentState.makeTaskIndex = 0;
+            const task = makeTasks[currentState.makeTaskIndex];
             
-            document.getElementById('make-task').innerText = "Собери: Я студент";
+            makeTarget = task.target;
+            makeWords = [...task.bank];
+            
+            document.getElementById('make-task').innerText = "Собери: " + task.ru;
             document.getElementById('make-sentence').innerHTML = '';
             document.getElementById('make-result').innerText = '';
             makeCurrent = [];
 
             const bank = document.getElementById('make-bank');
             bank.innerHTML = '';
-            // Shuffle words
             const shuffled = [...makeWords].sort(() => Math.random() - 0.5);
             shuffled.forEach(w => {
                 const chip = document.createElement('div');
@@ -620,19 +687,24 @@
             } else {
                 document.getElementById('make-result').innerText = "❌ Попробуй ещё";
                 document.getElementById('make-result').style.color = "red";
-                // Reset
-                setTimeout(() => {
-                    initMake();
-                }, 1000);
             }
+        }
+
+        function nextMakeTask() {
+            currentState.makeTaskIndex = (currentState.makeTaskIndex + 1) % makeTasks.length;
+            initMake();
         }
 
         // --- ВКЛАДКА НАПИШИ ---
         let writeTarget = "";
         let writeHint = "";
+
         function initWrite() {
-            writeTarget = "我是学生";
-            writeHint = "Я студент";
+            if (currentState.writeTaskIndex >= writeTasks.length) currentState.writeTaskIndex = 0;
+            const task = writeTasks[currentState.writeTaskIndex];
+
+            writeTarget = task.target;
+            writeHint = task.ru;
             document.getElementById('write-task').innerText = writeHint;
             document.getElementById('write-input').value = '';
             document.getElementById('write-result').innerHTML = '';
@@ -655,7 +727,6 @@
                 document.getElementById('write-chickens').innerHTML = '🐣'.repeat(currentState.writeAttempts);
                 
                 if (currentState.writeAttempts >= 3) {
-                    // Show diff
                     let diffHtml = `<div style="margin-top: 15px; text-align: center; font-size: 24px;">`;
                     for (let i = 0; i < Math.max(input.length, target.length); i++) {
                         const c1 = input[i] || '';
@@ -675,11 +746,16 @@
                     
                     document.getElementById('write-result').innerHTML = diffHtml;
                     document.getElementById('write-chickens').innerHTML = '';
-                    currentState.writeAttempts = 0; // reset
+                    currentState.writeAttempts = 0; 
                 } else {
                     document.getElementById('write-result').innerHTML = `<span style="color: #d49a6a;">Попробуй ещё...</span>`;
                 }
             }
+        }
+
+        function nextWriteTask() {
+            currentState.writeTaskIndex = (currentState.writeTaskIndex + 1) % writeTasks.length;
+            initWrite();
         }
 
         // --- ВКЛАДКА ЗАПОМНИ ---
@@ -734,6 +810,7 @@
 
         function openSettings() {
             document.getElementById('settings-modal').classList.add('active');
+            renderDecks();
         }
         function closeSettings() {
             document.getElementById('settings-modal').classList.remove('active');
@@ -753,14 +830,16 @@
         function saveSettings() {
             settings.pinyin = document.getElementById('setting-pinyin').value;
             settings.trans = document.getElementById('setting-trans').value;
+            localStorage.setItem('settings', JSON.stringify(settings));
             applyCardSettings();
-            initRead(); // re-render to apply
+            initRead(); 
         }
 
         function toggleSetting(key) {
             settings[key] = !settings[key];
             const btn = document.getElementById(`toggle-${key}`);
             btn.className = `toggle-btn ${settings[key] ? 'on' : ''}`;
+            localStorage.setItem('settings', JSON.stringify(settings));
             if (key === 'flowers') updateFlowerVisibility();
         }
 
@@ -783,7 +862,7 @@
                 icon.innerText = '🌸';
             } else {
                 icon.classList.add('bud');
-                icon.innerText = '🌱'; // Bud representation
+                icon.innerText = '🌱'; 
             }
         }
 
@@ -792,23 +871,99 @@
                 alert("Сначала сделай задание сегодня, чтобы цветок распустился!");
                 return;
             }
-            alert(`Твой сад: ${currentState.flowersCount} цветов! (Статистика по месяцам в разработке)`);
+            document.getElementById('garden-modal').classList.add('active');
+            renderGarden();
+        }
+
+        function closeGarden() {
+            document.getElementById('garden-modal').classList.remove('active');
+        }
+
+        function renderGarden() {
+            const months = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+            document.getElementById('garden-month-label').innerText = `${months[currentState.currentMonth]} ${currentState.currentYear}`;
+            
+            // Show flowers for this month
+            const flowerCount = currentState.flowersCount;
+            document.getElementById('garden-flowers').innerText = `🌸 ${flowerCount}`;
+
+            // Render map (simple grid for now)
+            const grid = document.getElementById('garden-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<28; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'garden-cell';
+                if (Math.random() > 0.5) cell.classList.add('level-1');
+                if (Math.random() > 0.8) cell.classList.add('level-2');
+                grid.appendChild(cell);
+            }
+        }
+
+        function changeMonth(dir) {
+            currentState.currentMonth += dir;
+            if (currentState.currentMonth > 11) {
+                currentState.currentMonth = 0;
+                currentState.currentYear++;
+            } else if (currentState.currentMonth < 0) {
+                currentState.currentMonth = 11;
+                currentState.currentYear--;
+            }
+            renderGarden();
         }
 
         function logActivity() {
             if (!currentState.hasActivityToday) {
                 currentState.hasActivityToday = true;
                 currentState.flowersCount++;
+                localStorage.setItem('hasActivityToday', 'true');
                 localStorage.setItem('flowersCount', currentState.flowersCount);
                 updateFlower();
             }
         }
 
+        // --- УПРАВЛЕНИЕ КОЛОДАМИ ---
+        function renderDecks() {
+            const container = document.getElementById('deck-list');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.keys(decks).forEach(key => {
+                const div = document.createElement('div');
+                div.className = 'deck-item';
+                div.innerHTML = `<span>${decks[key].name}</span> <span style="color: #888;">(${decks[key].words.length})</span>`;
+                if (key === currentState.activeDeck) div.style.fontWeight = 'bold';
+                div.onclick = () => {
+                    currentState.activeDeck = key;
+                    currentState.cardIndex = 0;
+                    initHanzi();
+                    renderDecks();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function openCreateDeck() {
+            const name = prompt("Название новой колоды:");
+            if (name) {
+                const key = 'deck_' + Date.now();
+                decks[key] = { name: name, words: [] };
+                localStorage.setItem('decks', JSON.stringify(decks));
+                renderDecks();
+            }
+        }
+
+        function openAddWord() {
+            alert("Функция добавления слов в разработке. Пока можно использовать только базовые слова.");
+        }
+
+        // --- ЭКСПОРТ / ИМПОРТ ---
         function exportData() {
             const data = {
+                allWords: allWords,
+                decks: decks,
+                grammar: grammar,
+                readData: readData,
                 settings: settings,
                 flowersCount: currentState.flowersCount,
-                studyDeck: currentState.studyDeck,
                 mapData: currentState.mapData
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -827,10 +982,17 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     if (data.settings) Object.assign(settings, data.settings);
+                    if (data.decks) decks = data.decks;
+                    if (data.allWords) allWords = data.allWords;
                     if (data.flowersCount) currentState.flowersCount = data.flowersCount;
-                    if (data.studyDeck) currentState.studyDeck = data.studyDeck;
+                    
+                    localStorage.setItem('settings', JSON.stringify(settings));
+                    localStorage.setItem('decks', JSON.stringify(decks));
+                    localStorage.setItem('allWords', JSON.stringify(allWords));
                     localStorage.setItem('flowersCount', currentState.flowersCount);
+                    
                     loadSettings();
+                    renderDecks();
                     alert("Данные успешно загружены!");
                     closeSettings();
                 } catch (err) {
