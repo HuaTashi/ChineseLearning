@@ -291,6 +291,81 @@
         { ru: "Я тоже рад", target: "我也很高兴" },
         { ru: "Где библиотека?", target: "图书馆在哪儿" }
     ];
+            // --- ПАТЧ: ИСПРАВЛЕНИЯ ---
+        
+        // 1. Исправляем листание страниц (чтобы не обрезалось)
+        document.querySelector('.content').style.overflowY = 'auto';
+        document.querySelector('.content').style.height = 'calc(100vh - 120px)'; // 120px — примерная высота хедера и таб-бара
+
+        // 2. Новые задания для "Напиши" (отличаются от "Составь")
+        const newWriteTasks = [
+            { ru: "Я не студент", target: "我不是学生" },
+            { ru: "Она студентка", target: "她是学生" },
+            { ru: "Ты не учитель", target: "你不是老师" },
+            { ru: "Он тоже студент", target: "他也是学生" },
+            { ru: "Я не знаю", target: "我不知道" }
+        ];
+        // Перезаписываем старые writeTasks
+        writeTasks.length = 0;
+        newWriteTasks.forEach(t => writeTasks.push(t));
+
+        // 3. Функция редактирования колоды (вместо заглушки)
+        function openEditDeck() {
+            const deckKey = currentState.activeDeck;
+            if (deckKey === 'default') {
+                alert("Базовую колоду редактировать нельзя. Создай свою колоду.");
+                return;
+            }
+            const deck = decks[deckKey];
+            const allAvailableWords = allWords;
+            
+            let html = `<div style="max-height: 400px; overflow-y: auto;">`;
+            allAvailableWords.forEach((w, i) => {
+                const isInDeck = deck.words.some(dw => dw.hanzi === w.hanzi);
+                html += `
+                    <div style="display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #eee;">
+                        <input type="checkbox" id="word-${i}" ${isInDeck ? 'checked' : ''} style="margin-right: 10px; width: 20px; height: 20px;">
+                        <label for="word-${i}" style="flex: 1;">${w.hanzi} (${w.pinyin}) — ${w.trans}</label>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<button class="btn" style="margin-top: 10px;" onclick="saveDeckEdit('${deckKey}')">Сохранить</button>`;
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'edit-deck-modal';
+            modal.innerHTML = `
+                <div class="book">
+                    <div class="book-header">
+                        <span>Редактировать: ${deck.name}</span>
+                        <button class="close-book" onclick="document.getElementById('edit-deck-modal').remove()">✕</button>
+                    </div>
+                    <div class="book-content" style="padding: 15px; overflow-y: auto; display: block;">
+                        ${html}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function saveDeckEdit(deckKey) {
+            const deck = decks[deckKey];
+            const checkboxes = document.querySelectorAll('#edit-deck-modal input[type="checkbox"]');
+            const newWords = [];
+            checkboxes.forEach((cb, i) => {
+                if (cb.checked) {
+                    newWords.push(allWords[i]);
+                }
+            });
+            deck.words = newWords;
+            localStorage.setItem('decks', JSON.stringify(decks));
+            document.getElementById('edit-deck-modal').remove();
+            initHanzi();
+            renderDecks();
+            alert("Колода сохранена!");
+        }
+        // --- КОНЕЦ ПАТЧА ---
             </script>
     
 </body>
