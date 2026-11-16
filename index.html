@@ -292,10 +292,6 @@
         { ru: "Где библиотека?", target: "图书馆在哪儿" }
     ];
             // --- ПАТЧ: ИСПРАВЛЕНИЯ ---
-        
-        // 1. Исправляем листание страниц (чтобы не обрезалось)
-        document.querySelector('.content').style.overflowY = 'auto';
-        document.querySelector('.content').style.height = 'calc(100vh - 120px)'; // 120px — примерная высота хедера и таб-бара
 
         // 2. Новые задания для "Напиши" (отличаются от "Составь")
         const newWriteTasks = [
